@@ -10,9 +10,9 @@ function App() {
   const dispatch = useCryptoHoldingUpdater();
   const tokens = useCryptoHoldingState();
   const query = useQuery("todos", async () => {
-    const response = await fetch(
-      "https://cryptoworth.netlify.app/.netlify/functions/bypass-cors"
-    );
+    const response = await fetch("/.netlify/functions/bypass-cors", {
+      mode: "no-cors",
+    });
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
