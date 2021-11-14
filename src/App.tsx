@@ -1,15 +1,24 @@
-import { useState } from "react";
-import "./App.css";
-import { useCryptoHoldingState, useCryptoHoldingUpdater } from "./context";
-import Token from "src/components/Token";
+import React, { useState } from "react";
 import { useQuery } from "react-query";
+import { CellProps, Column } from "react-table";
+
+import {
+  useCryptoHoldingState,
+  useCryptoHoldingUpdater,
+} from "./CryptoHoldingProvider";
+import Token from "src/components/Token";
+import Table from "src/components/Table";
+import { TokenHoldingType } from "./utils";
+import { CryptoTokens } from "./constants";
+import type { CryptoTokenType } from "./constants";
+import GithubIcon from "./github.svg";
 
 function App() {
   const [showInput, setShowInput] = useState(false);
   const [tokenName, setTokenName] = useState("");
   const dispatch = useCryptoHoldingUpdater();
   const tokens = useCryptoHoldingState();
-  const query = useQuery("todos", async () => {
+  const query = useQuery("tickers", async () => {
     const response = await fetch("/.netlify/functions/bypass-cors", {
       mode: "no-cors",
     });
@@ -34,10 +43,8 @@ function App() {
   };
 
   const getWazirxWorth = () => {
-    window.localStorage.setItem("cryptoAssets", JSON.stringify(tokens));
     if (!query.isSuccess) {
-      alert("api call failed");
-      return;
+      return null;
     }
     const tickers = query.data;
     const totalValue = tokens.reduce((acc, token) => {
@@ -46,28 +53,52 @@ function App() {
       const tokenWorth = token.amount * tickerObject.last;
       return acc + tokenWorth;
     }, 0);
-    console.log(totalValue);
-    alert("Your crypto worth in WazirX platform is " + totalValue);
     return totalValue;
   };
 
+  const columns = React.useMemo<Array<Column<TokenHoldingType>>>(
+    () => [
+      {
+        Header: "Token",
+        accessor: "ticker",
+        Footer: "Your Total Crypto Worth in WazirX:",
+      },
+      {
+        Header: "Amount",
+        accessor: "amount",
+        Cell: ({ value, row }: CellProps<TokenHoldingType, number>) => (
+          <Token token={{ ticker: row.values.ticker, amount: value }} />
+        ),
+        Footer: () => {
+          const totalValue = getWazirxWorth();
+          return totalValue ?? "Error in Fetching Data";
+        },
+      },
+    ],
+    []
+  );
+
+  const data = React.useMemo(() => tokens, [tokens]);
+
   return (
-    <div className='App'>
-      {tokens.map((token) => (
-        <Token token={token} key={token.ticker} />
-      ))}
+    <div className='m-12'>
+      <Table<TokenHoldingType> columns={columns} data={data} />
       {showInput && (
-        <input
+        <select
           name='token'
           value={tokenName}
           onChange={(event) => setTokenName(event.target.value)}
-        />
+          className='my-4'
+        >
+          {CryptoTokens.map((tokenData: CryptoTokenType) => (
+            <option value={tokenData.ticker}>{tokenData.name}</option>
+          ))}
+        </select>
       )}
-      <button onClick={handleAddClick}>
-        {" "}
-        {showInput ? "Submit" : "Add Token"}{" "}
+      <button className='my-4 block' onClick={handleAddClick}>
+        {showInput ? "Submit" : "Add Token"}
       </button>
-      <button onClick={getWazirxWorth}> Calculate WazirX Value </button>
+      {/* <a href='https://github.com/gnsharma/wazirx-crypto-worth'>Test</a> */}
       Source Code: https://github.com/gnsharma/wazirx-crypto-worth
     </div>
   );

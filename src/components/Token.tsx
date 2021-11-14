@@ -1,13 +1,16 @@
-import { ChangeEvent } from "react";
-import { useCryptoHoldingUpdater } from "../context";
-import type { TokenType } from "../context";
+import { ChangeEvent, useState } from "react";
+import IconDelete from "~icons/mdi/delete";
+
+import { useCryptoHoldingUpdater } from "src/CryptoHoldingProvider";
+import type { TokenHoldingType } from "src/utils";
 
 type TokenProps = {
-  token: TokenType;
+  token: TokenHoldingType;
 };
 
 function Token({ token }: TokenProps) {
   const dispatch = useCryptoHoldingUpdater();
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
 
   const updateAmount = (event: ChangeEvent<HTMLInputElement>) => {
     dispatch({
@@ -18,17 +21,31 @@ function Token({ token }: TokenProps) {
       },
     });
   };
+
+  const toggleAmountEditing = () => {
+    setIsEditingAmount((isEditingAmount) => !isEditingAmount);
+  };
+
   return (
-    <div className='token'>
-      <span style={{ margin: "20px" }}>
-        {token.ticker}: {token.amount}
-      </span>
-      <input
-        name='amount'
-        value={token.amount}
-        type='number'
-        onChange={updateAmount}
-      ></input>
+    <div className='flex justify-between'>
+      {isEditingAmount ? (
+        <input
+          name='amount'
+          value={token.amount}
+          type='number'
+          onChange={updateAmount}
+          onBlur={toggleAmountEditing}
+        ></input>
+      ) : (
+        <span onClick={toggleAmountEditing} className='flex-grow'>
+          {token.amount}
+        </span>
+      )}
+      <button
+        onClick={() => dispatch({ type: "DELETE_TOKEN", payload: token })}
+      >
+        <IconDelete />
+      </button>
     </div>
   );
 }

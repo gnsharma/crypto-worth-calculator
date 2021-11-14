@@ -18,7 +18,11 @@
     "paths": {
       "src/*": ["./src/*"]
     },
-    "types": ["node"]
+    "types": [
+      "node",
+      "unplugin-icons/types/react",
+      "vite/client"
+    ]
   },
   "include": ["./src", "functions"]
 }

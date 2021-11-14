@@ -1,9 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import "./index.css";
-import App from "./App";
-import { CryptoHoldingProvider } from "./context";
 import { QueryClient, QueryClientProvider } from "react-query";
+import "tailwindcss/tailwind.css";
+
+import App from "./App";
+import { CryptoHoldingProvider } from "./CryptoHoldingProvider";
 
 const queryClient = new QueryClient();
 

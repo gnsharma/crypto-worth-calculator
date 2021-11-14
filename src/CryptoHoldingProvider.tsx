@@ -1,40 +1,14 @@
 import { createContext, ReactNode, useContext } from "react";
-import Ajv, { JTDDataType } from "ajv/dist/jtd";
-import { useImmerReducer } from "use-immer";
+import produce from "immer";
 
-const cryptoHoldingsSchema = {
-  elements: {
-    properties: {
-      ticker: { type: "string" },
-      amount: { type: "float32" },
-    },
-  },
-} as const;
+import useReducerWithMiddlewares from "./useReducerWithMiddlewares";
+import { loadPersistedCryptoHoldings, persistCryptoHoldings } from "./utils";
+import type { Action, CryptoHoldingsType } from "./utils";
 
-type CryptoHoldingsTypeDerived = JTDDataType<typeof cryptoHoldingsSchema>;
-type TokenType = {
-  ticker: string;
-  amount: number;
-};
 type CryptoHoldingProviderProps = { children: ReactNode };
 type Dispatch = (action: Action) => void;
-type Action =
-  | { type: "ADD_TOKEN"; payload: TokenType }
-  | { type: "UPDATE_TOKEN_AMOUNT"; payload: TokenType };
 
-const ajv = new Ajv();
-const parseCryptoHoldings =
-  ajv.compileParser<CryptoHoldingsTypeDerived>(cryptoHoldingsSchema);
-const serializeCryptoHoldings =
-  ajv.compileSerializer<CryptoHoldingsTypeDerived>(cryptoHoldingsSchema);
-const crytoHoldings = parseCryptoHoldings(
-  window.localStorage.getItem("cryptoAssets") ?? ""
-);
-if (crytoHoldings === undefined) {
-  console.log("invalid data stored in localStorage");
-}
-
-const cryptoReducer = (state: CryptoHoldingsTypeDerived, action: Action) => {
+const cryptoReducer = produce((state: CryptoHoldingsType, action: Action) => {
   switch (action.type) {
     case "ADD_TOKEN": {
       state.push(action.payload);
@@ -43,27 +17,36 @@ const cryptoReducer = (state: CryptoHoldingsTypeDerived, action: Action) => {
 
     case "UPDATE_TOKEN_AMOUNT": {
       const tokenIndex = state.findIndex(
-        (tokenObject) => tokenObject.ticker === action.payload.ticker
+        (token) => token.ticker === action.payload.ticker
       );
       if (tokenIndex !== -1) state[tokenIndex].amount = action.payload.amount;
       break;
+    }
+
+    case "DELETE_TOKEN": {
+      return state.filter((token) => token.ticker !== action.payload.ticker);
     }
 
     default: {
       break;
     }
   }
-};
+});
 
-const CryptoHoldingStateContext = createContext<
-  CryptoHoldingsTypeDerived | undefined
->(undefined);
+const CryptoHoldingStateContext = createContext<CryptoHoldingsType | undefined>(
+  undefined
+);
 const CryptoHoldingUpdaterContext = createContext<Dispatch | undefined>(
   undefined
 );
 
 function CryptoHoldingProvider({ children }: CryptoHoldingProviderProps) {
-  const [state, dispatch] = useImmerReducer(cryptoReducer, crytoHoldings ?? []);
+  const [state, dispatch] = useReducerWithMiddlewares(
+    cryptoReducer,
+    loadPersistedCryptoHoldings(),
+    [],
+    [(_, state) => persistCryptoHoldings(state)]
+  );
 
   return (
     <CryptoHoldingStateContext.Provider value={state}>
@@ -98,7 +81,4 @@ export {
   CryptoHoldingProvider,
   useCryptoHoldingState,
   useCryptoHoldingUpdater,
-  parseCryptoHoldings,
-  serializeCryptoHoldings,
 };
-export type { TokenType };
